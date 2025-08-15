@@ -9,13 +9,10 @@ class Status(IntEnum):
 
 
 class GitManager:
-    def printGit():
-        print("nicee....")
-
     def status():
         ans = subprocess.run(["git", "status"], capture_output=True)
         if ans.returncode == Status.OK:
-            print(ans.stdout)
+            print(f"Status: {ans.stdout}")
         else:
             print(ans.stderr)
 
@@ -36,11 +33,21 @@ class GitManager:
         )
         if ans.returncode == Status.ERROR:
             print("ERROR 1: directory is not a repository")
+        else:
+            print(f"Output: {ans.stdout}")
 
         return ans
 
     def format_url(remote: str):
         return
+
+    def get_tags():
+        ans = subprocess.run(
+            ["git", "tag", "--list", "'v*'", "--sort=-v:refname"],
+            capture_output=True
+        )
+        if not ans.stdout:
+            print("There's no tags in this repository")
 
 
 def current_directory():
@@ -49,7 +56,4 @@ def current_directory():
 
 if __name__ == "__main__":
     current_directory()
-    GitManager.printGit()
-    GitManager.status()
-    # GitManager.gitHelp()
-    GitManager.get_remote()
+    GitManager.get_tags()
