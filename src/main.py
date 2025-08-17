@@ -1,5 +1,6 @@
 # from git_manager import GitManager
 import subprocess
+import re
 from enum import IntEnum
 
 
@@ -25,21 +26,15 @@ class GitManager:
 
     def authenticate():
         ans = subprocess.run()
-
-    def get_remote():
-        ans = subprocess.run(
-            ["git", "config", "--get", "remote.origin.url"],
-            capture_output=True
-        )
-        if ans.returncode == Status.ERROR:
-            print("ERROR 1: directory is not a repository")
-        else:
-            print(f"Output: {ans.stdout}")
-
         return ans
 
-    def format_url(remote: str):
-        return
+    def validate_push():
+        ans = subprocess.run(["git", "push", "--dry-run"], capture_output=True)
+        print(ans.stderr.decode())
+        if ans.returncode == Status.OK:
+            print("Push successful")
+        else:
+            print(f"Push failed: {ans.stderr.decode()}")
 
     def get_tags():
         ans = subprocess.run(
@@ -49,6 +44,18 @@ class GitManager:
         if not ans.stdout:
             print("There's no tags in this repository")
 
+    def get_remote():
+        ans = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            capture_output=True
+        )
+        if ans.returncode == Status.ERROR:
+            print("ERROR 1: directory is not a repository")
+            return None
+        url = ans.stdout.decode().strip() if isinstance(
+            ans.stdout, bytes) else str(ans.stdout).strip()
+        return url
+
 
 def current_directory():
     subprocess.run(["pwd"])
@@ -56,4 +63,6 @@ def current_directory():
 
 if __name__ == "__main__":
     current_directory()
-    GitManager.get_tags()
+    remote = GitManager.get_remote()
+    print(remote)
+    GitManager.validate_push()
