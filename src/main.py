@@ -56,14 +56,16 @@ class GitManager:
         return url
 
     def get_commits():
+        #H commit hash, %s commit message, %b commit body, !end. end of commit
+        # |!| will be used later to split the output
         ans = subprocess.run(
-            ["git", "log" ,"--no-decorate", "--pretty=%H %s"],
+            ["git", "log" ,"--no-decorate", "--pretty=%H|!| %s|!| %b!end."],
             capture_output=True
         )
         if ans.returncode == Status.OK:
             print("Commits retrieved successfully")
             if ans.stdout:
-                res = ans.stdout.decode().splitlines()
+                res = ans.stdout.decode().replace("\n", "").split("!end.")
             print(res)
             return res
         else:
