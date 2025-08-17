@@ -30,9 +30,8 @@ class GitManager:
 
     def validate_push():
         ans = subprocess.run(["git", "push", "--dry-run"], capture_output=True)
-        print(ans.stderr.decode())
         if ans.returncode == Status.OK:
-            print("Push successful")
+            print("Push validation successful")
         else:
             print(f"Push failed: {ans.stderr.decode()}")
 
