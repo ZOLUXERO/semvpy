@@ -15,5 +15,5 @@ if __name__ == "__main__":
     changes = GitManager.get_commits()
     changelog = File("CHANGELOG.md")
     result: str = changelog.format(changes)
-    print(result)
+    # print(result)
     # changelog.write_changelog(result)

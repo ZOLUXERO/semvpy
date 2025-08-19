@@ -1,4 +1,11 @@
 from pathlib import Path
+from enum import IntEnum
+
+
+class Commit(IntEnum):
+    HASH = 0
+    MESSAGE = 1
+    FOOTER = 2
 
 
 class File:
@@ -43,18 +50,53 @@ class File:
         # puede causar problemas de rendimiento, posible solucion
         # un diccionario?
         commits: list = []
-        formated_commits: list = []
+        formated_commits: dict = {
+            'feat': [],
+            'fix': [],
+            'chore': [],
+            'test': [],
+            'build': [],
+            'ci': [],
+            'docs': [],
+            'style': [],
+            'reafactor': [],
+            'perf': [],
+            'revert': [],
+        }
+
         result: str = ""
 
         for change in changes:
             commits.append(change.split("|!|"))
 
-        for item in commits:
-            item[0] = f'[hash]({item[0]})'
-            item[1] = f'{item[1]}'
-            if item[2].strip() != "":
-                item[2] = f', {item[2]}'
-            formated_commits.append(' '.join(item))
+        # TODO: validar si el scope viene con el mensaje del commit
+        # si no viene dejarlo vacio, si viene ponerlo con el formato
+        # **scope:**.
+        # En vez de hacer otro diccionario dentro de formated_commits
+        # devolver de una vez un string formateado como:
+        # f'hash, <scope: si existe>, mensaje, <footer si existe>'
+        # probablemente haya que hacer un regex para validar si el mensaje
+        # viene con scope.
+        # retornar resultado
+        for index, item in enumerate(commits):
+            message: str = item[Commit.MESSAGE].strip().split(':')
+            footer: str = ''
+            if item[Commit.FOOTER].strip() != '':
+                footer = f', {item[Commit.FOOTER]}'
 
-        result = '\n'.join(formated_commits)
-        return result
+            formated_commits[message[0]].append({
+                'hash': f'[hash]({item[Commit.HASH]})',
+                'scope': '',
+                'message': message[1],
+                'footer': footer,
+            })
+
+        self.print_format(formated_commits)
+
+        # result = '\n'.join(formated_commits)
+        # return result
+        #
+
+    def print_format(self, formated_commits: dict):
+        for value in formated_commits:
+            print(f'{value}:\n{formated_commits[value]}')
