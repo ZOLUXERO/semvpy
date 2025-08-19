@@ -1,11 +1,18 @@
 from pathlib import Path
 from enum import IntEnum
+import re
 
 
 class Commit(IntEnum):
     HASH = 0
     MESSAGE = 1
     FOOTER = 2
+
+
+class Change(IntEnum):
+    TYPE = 1
+    SCOPE = 2
+    BREAKING_CHANGE = 3
 
 
 class File:
@@ -59,7 +66,7 @@ class File:
             'ci': [],
             'docs': [],
             'style': [],
-            'reafactor': [],
+            'refactor': [],
             'perf': [],
             'revert': [],
         }
@@ -78,20 +85,43 @@ class File:
         # probablemente haya que hacer un regex para validar si el mensaje
         # viene con scope.
         # retornar resultado
-        for index, item in enumerate(commits):
-            message: str = item[Commit.MESSAGE].strip().split(':')
+        #
+        # feat: message
+        # feat(scope): message
+        # feat!: message
+        # feat(scope)!: message
+
+        # r"<type>group=1, <scope, optional>group=2,
+        # <! breagking change, optional>group=3, <:>"
+        pattern = r"(feat|fix|chore|test|build|ci|docs|style|refactor|perf|revert)(\(.+\))?(!)?:"
+
+        for index, commit in enumerate(commits):
+            match = re.search(pattern, commit[Commit.MESSAGE])
+            print(match.group())
+            if match.group(Change.SCOPE):
+                print("tiene scope")
+            else:
+                print("no tiene scope")
+
+            if match.group(Change.BREAKING_CHANGE):
+                print("contiene Breaking change")
+            else:
+                print("No contiene Breaking change")
+
+            message: str = commit[Commit.MESSAGE].strip().split(':', 1)
             footer: str = ''
-            if item[Commit.FOOTER].strip() != '':
-                footer = f', {item[Commit.FOOTER]}'
+            scope: str = ''
+            if commit[Commit.FOOTER].strip() != '':
+                footer = f', {commit[Commit.FOOTER]}'
 
             formated_commits[message[0]].append({
-                'hash': f'[hash]({item[Commit.HASH]})',
-                'scope': '',
+                'hash': f'[hash]({commit[Commit.HASH]})',
+                'scope': scope,
                 'message': message[1],
                 'footer': footer,
             })
 
-        self.print_format(formated_commits)
+#        self.print_format(formated_commits)
 
         # result = '\n'.join(formated_commits)
         # return result
