@@ -53,12 +53,22 @@ class File:
             print(f'ERROR: {e}')
             raise
 
-    def format(self, changes: list) -> str:
+    def group_changes_by_type(self, changes: list) -> dict:
         # TODO: se estan creando dos copias de la lista en memoria
         # puede causar problemas de rendimiento, posible solucion
         # un diccionario?
         commits: list = []
-        formated_commits: dict = {
+        # Examples:
+        # feat: message
+        # feat<!optional>: message
+        # feat<(scope)optional>: message
+        # feat<(scope)optional><!optional>: message
+        #
+        # r"(<type>group=1) (<scope, optional>group=2)
+        # (! breagking change, optional>group=3) <:>,
+        # (message between 1 and 100 character>group=4)"
+        pattern: str = r"(feat|fix|chore|test|build|ci|docs|style|refactor|perf|revert)(\(.+\))?(!)?:(.{1,100})"
+        grouped_changes: dict = {
             'feat': [],
             'fix': [],
             'chore': [],
@@ -71,27 +81,8 @@ class File:
             'perf': [],
             'revert': [],
         }
-
-        result: str = ""
-
         for change in changes:
             commits.append(change.split("|!|"))
-
-        # TODO: En vez de hacer otro diccionario dentro de formated_commits
-        # devolver de una vez un string formateado como:
-        # f'hash, <scope: si existe>, mensaje, <footer si existe>'
-        # retornar resultado
-        #
-        # Examples:
-        # feat: message
-        # feat<!optional>: message
-        # feat<(scope)optional>: message
-        # feat<(scope)optional><!optional>: message
-        #
-        # r"(<type>group=1) (<scope, optional>group=2)
-        # (! breagking change, optional>group=3) <:>,
-        # (message between 1 and 100 character>group=4)"
-        pattern = r"(feat|fix|chore|test|build|ci|docs|style|refactor|perf|revert)(\(.+\))?(!)?:(.{1,100})"
 
         for index, commit in enumerate(commits):
             match = re.search(pattern, commit[Commit.MESSAGE])
@@ -101,33 +92,40 @@ class File:
             breaking_change: bool = False
 
             if match.group(Change.SCOPE):
-                scope: str = f' **{match.group(Change.SCOPE).strip('()')}**'
-
+                scope = f' **{match.group(Change.SCOPE).strip('()')}**'
             if match.group(Change.BREAKING_CHANGE):
                 breaking_change = True
-
             if match.group(Change.MESSAGE):
-                message: str = match.group(Change.MESSAGE)
+                message = match.group(Change.MESSAGE)
 
             if commit[Commit.BODY].strip() != '':
                 body = f', {commit[Commit.BODY]}'
 
-            formated_commits[match.group(Change.TYPE)].append({
+            grouped_changes[match.group(Change.TYPE)].append({
                 'hash': commit[Commit.HASH],
                 'scope': scope,
                 'message': message,
                 'body': body,
                 'breaking_change': breaking_change,
-                'text': f'[hash]({commit[Commit.HASH]
-                                  }){scope}:{message}{body}',
+                'text': f'- [hash]({commit[Commit.HASH]
+                                    }){scope}:{message}{body}',
             })
 
-        self.print_format(formated_commits)
+        return grouped_changes
 
-        # result = '\n'.join(formated_commits)
-        # return result
-        #
+    def format_changes(self, grouped_changes: dict) -> str:
+        markdown_changes: str = ''
+        for commit_type in grouped_changes:
+            if grouped_changes[commit_type]:
+                changelog_body = [d['text']
+                                  for d in grouped_changes[commit_type]]
+                changelog_body = '\n'.join(changelog_body)
+                markdown_changes += f'\n## {commit_type.title()}\n'
+                markdown_changes += changelog_body
 
-    def print_format(self, formated_commits: dict):
-        for value in formated_commits:
-            print(f'{value}:\n{formated_commits[value]}')
+        markdown_changes += '\n'
+        return markdown_changes
+
+    def print_format(self, grouped_changes: dict):
+        for value in grouped_changes:
+            print(f'{value}:\n{grouped_changes[value]}')
