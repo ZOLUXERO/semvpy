@@ -14,6 +14,6 @@ if __name__ == "__main__":
     GitManager.validate_push()
     changes = GitManager.get_commits()
     changelog = File("CHANGELOG.md")
-    result: str = changelog.format(changes)
+    result = changelog.format(changes)
     # print(result)
     # changelog.write_changelog(result)

@@ -6,13 +6,14 @@ import re
 class Commit(IntEnum):
     HASH = 0
     MESSAGE = 1
-    FOOTER = 2
+    BODY = 2
 
 
 class Change(IntEnum):
     TYPE = 1
     SCOPE = 2
     BREAKING_CHANGE = 3
+    MESSAGE = 4
 
 
 class File:
@@ -76,52 +77,52 @@ class File:
         for change in changes:
             commits.append(change.split("|!|"))
 
-        # TODO: validar si el scope viene con el mensaje del commit
-        # si no viene dejarlo vacio, si viene ponerlo con el formato
-        # **scope:**.
-        # En vez de hacer otro diccionario dentro de formated_commits
+        # TODO: En vez de hacer otro diccionario dentro de formated_commits
         # devolver de una vez un string formateado como:
         # f'hash, <scope: si existe>, mensaje, <footer si existe>'
-        # probablemente haya que hacer un regex para validar si el mensaje
-        # viene con scope.
         # retornar resultado
         #
+        # Examples:
         # feat: message
-        # feat(scope): message
-        # feat!: message
-        # feat(scope)!: message
-
-        # r"<type>group=1, <scope, optional>group=2,
-        # <! breagking change, optional>group=3, <:>"
-        pattern = r"(feat|fix|chore|test|build|ci|docs|style|refactor|perf|revert)(\(.+\))?(!)?:"
+        # feat<!optional>: message
+        # feat<(scope)optional>: message
+        # feat<(scope)optional><!optional>: message
+        #
+        # r"(<type>group=1) (<scope, optional>group=2)
+        # (! breagking change, optional>group=3) <:>,
+        # (message between 1 and 100 character>group=4)"
+        pattern = r"(feat|fix|chore|test|build|ci|docs|style|refactor|perf|revert)(\(.+\))?(!)?:(.{1,100})"
 
         for index, commit in enumerate(commits):
             match = re.search(pattern, commit[Commit.MESSAGE])
-            print(match.group())
+            scope: str = ''
+            message: str = ''
+            body: str = ''
+            breaking_change: bool = False
+
             if match.group(Change.SCOPE):
-                print("tiene scope")
-            else:
-                print("no tiene scope")
+                scope: str = f' **{match.group(Change.SCOPE).strip('()')}**'
 
             if match.group(Change.BREAKING_CHANGE):
-                print("contiene Breaking change")
-            else:
-                print("No contiene Breaking change")
+                breaking_change = True
 
-            message: str = commit[Commit.MESSAGE].strip().split(':', 1)
-            footer: str = ''
-            scope: str = ''
-            if commit[Commit.FOOTER].strip() != '':
-                footer = f', {commit[Commit.FOOTER]}'
+            if match.group(Change.MESSAGE):
+                message: str = match.group(Change.MESSAGE)
 
-            formated_commits[message[0]].append({
-                'hash': f'[hash]({commit[Commit.HASH]})',
+            if commit[Commit.BODY].strip() != '':
+                body = f', {commit[Commit.BODY]}'
+
+            formated_commits[match.group(Change.TYPE)].append({
+                'hash': commit[Commit.HASH],
                 'scope': scope,
-                'message': message[1],
-                'footer': footer,
+                'message': message,
+                'body': body,
+                'breaking_change': breaking_change,
+                'text': f'[hash]({commit[Commit.HASH]
+                                  }){scope}:{message}{body}',
             })
 
-#        self.print_format(formated_commits)
+        self.print_format(formated_commits)
 
         # result = '\n'.join(formated_commits)
         # return result
