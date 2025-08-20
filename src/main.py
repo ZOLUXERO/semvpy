@@ -17,4 +17,5 @@ if __name__ == "__main__":
     grouped_changes: dict = changelog.group_changes_by_type(changes)
     result: str = changelog.format_changes(grouped_changes)
     print(result)
+    changelog.update_version(grouped_changes)
     # changelog.write_changelog(result)

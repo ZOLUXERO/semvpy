@@ -126,6 +126,27 @@ class File:
         markdown_changes += '\n'
         return markdown_changes
 
+    def update_version(self, changes: dict,
+                       old_version: str = 'v1.4.0') -> str:
+        MAJOR, MINOR, PATCH = 0, 1, 2
+        version = old_version.replace('v', '').split('.')
+        major_categories: set = {"perf"}
+        minor_categories: set = {"feat", "chore",
+                                 "docs", "style", "refactor", "ci"}
+        patch_categories: set = {"fix", "build", "test", "revert"}
+        version_str: str = ''
+
+        if any(changes.get(category) for category in major_categories):
+            version[MAJOR] = str(int(version[MAJOR]) + 1)
+        elif any(changes.get(category) for category in minor_categories):
+            version[MINOR] = str(int(version[MINOR]) + 1)
+        elif any(changes.get(category) for category in patch_categories):
+            version[PATCH] = str(int(version[PATCH]) + 1)
+
+        version_str = f'v{'.'.join(version)}'
+        print(version_str)
+        return version_str
+
     def print_format(self, grouped_changes: dict):
         for value in grouped_changes:
             print(f'{value}:\n{grouped_changes[value]}')
