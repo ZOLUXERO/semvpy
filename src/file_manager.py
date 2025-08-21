@@ -32,7 +32,7 @@ class File:
         try:
             path = Path(self.file_name)
             contents = path.read_text(encoding="utf-8")
-            print(f'File: {path} exists, {contents}')
+            print(f'File: {path} exists')
         except Exception as e:
             print(f'ERROR: {e}')
             self.create_file()
@@ -129,8 +129,8 @@ class File:
                 'message': message,
                 'body': body,
                 'breaking_change': breaking_change,
-                'text': f'- [hash]({commit[Commit.HASH]
-                                    }){scope}:{message}{body}',
+                'text': f'- [[hash]({commit[Commit.HASH]
+                                     })]{scope}:{message}{body}',
             })
 
         return grouped_changes
@@ -142,7 +142,7 @@ class File:
                 changelog_body = [d['text']
                                   for d in grouped_changes[commit_type]['contents']]
                 changelog_body = '\n'.join(changelog_body)
-                markdown_changes += f'\n## {commit_type.title()}\n'
+                markdown_changes += f'\n### {commit_type.title()}\n'
                 markdown_changes += changelog_body
 
         markdown_changes += '\n'
@@ -151,10 +151,13 @@ class File:
     def update_version(
             self,
             changes: dict,
-            old_version: str = 'v1.4.0'
+            tag: str
     ) -> str:
+        if tag is None:
+            return self.format_version([1, 0, 0])
+
         MAJOR, MINOR, PATCH = 0, 1, 2
-        version = self.parse_version(old_version)
+        version = self.parse_version(tag)
 
         if self.has_changes(changes, self.ALL_TYPES, 'breaking_change'):
             version[MAJOR] += 1
