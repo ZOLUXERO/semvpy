@@ -36,9 +36,9 @@ class GitManager:
             print(f"Push failed: {ans.stderr.decode()}")
             return False
 
-    def push(self, tag: str):
+    def push_tag(self, tag: str, remote: str):
         ans = subprocess.run(
-            ["git", "push", "origin", f"{tag}", "--dry-run"],
+            ["git", "push", "--tags", f"{remote}", "--dry-run"],
             capture_output=True
         )
         if ans.returncode == Status.OK:
@@ -70,10 +70,13 @@ class GitManager:
 
         return ans.stdout.decode()
 
-    def create_tag(self, tag: str):
+    def create_tag(self, tag: str) -> bool:
         ans = subprocess.run(["git", "tag", f"{tag}"])
         if ans.returncode == Status.OK:
             print(f"tag {tag} created...")
+            return True
+
+        return False
 
     def get_remote(self):
         ans = subprocess.run(
@@ -87,13 +90,13 @@ class GitManager:
             ans.stdout, bytes) else str(ans.stdout).strip()
         return url
 
-    def get_commits(self, reference: str = 'HEAD'):
+    def get_commits(self, reference: str = 'HEAD') -> list:
         """
         Args:
             reference (str): point from where the commits will be taken.
 
         Returns:
-            str: %H commit hash, %s commit message, %b commit body, <!end.> end of commit <|!|> will be used later to split the output.
+            list (str): %H commit hash, %s commit message, %b commit body, <!end.> end of commit <|!|> will be used later to split the output.
         """
         ans = subprocess.run(
             ["git", "log", f"{reference}",
@@ -116,3 +119,65 @@ class GitManager:
         ans = subprocess.run(["git", "tag", "-d", f"{tag}"])
         if ans.returncode == Status.OK:
             print(f"tag {tag} deleted...")
+
+    def add(self):
+        ans = subprocess.run(
+            ["git", "add", "./CHANGELOG.md"],
+            capture_output=True
+        )
+        if ans.returncode == Status.OK:
+            print("CHANGELOG.md added to git changes to send")
+
+    def commit(self, message: str = "skip: CHANGELOG.md udpated"):
+        ans = subprocess.run(
+            ["git", "commit", "-m", f"{message}"],
+            capture_output=True
+        )
+        if ans.returncode == Status.OK:
+            print("changes to CHANGELOG.md have been commited")
+
+    def reset():
+        ans = subprocess.run(
+            ["git", "reset", "--hard", "origin"],
+            capture_output=True
+        )
+        if ans.returncode == Status.OK:
+            print("changes to CHANGELOG.md have been commited")
+
+    def validate_version():
+        return
+
+    def ref_exists():
+        return
+
+    def fetch_tags():
+        """ Fetch all tags from a repository """
+        return
+
+    def is_repo():
+        """ check if current directory is a repository """
+        ans = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            capture_output=True
+        )
+
+    def get_head(self):
+        ans = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True
+        )
+        if ans.returncode == Status.OK:
+            return ans.stdout.decode().strip()
+        return None
+
+    def check_if_brach_up_to_date(self, remote: str, branch: str):
+        ans = subprocess.run(
+            ["git", "ls-remote", remote, branch],
+            capture_output=True
+        )
+        pattern: str = r"^(?P<ref>\w+)?"
+        hash_remote_head: str = re.search(pattern, ans.stdout.decode())
+        if self.get_head() == hash_remote_head.group(0):
+            return True
+
+        return False
