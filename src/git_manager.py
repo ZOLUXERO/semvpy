@@ -27,7 +27,7 @@ class GitManager:
         ans = subprocess.run()
         return ans
 
-    def validate_push(self) -> bool:
+    def is_allowed_to_push(self) -> bool:
         ans = subprocess.run(["git", "push", "--dry-run"], capture_output=True)
         if ans.returncode == Status.OK:
             print("Push validation successful")
@@ -38,7 +38,7 @@ class GitManager:
 
     def push_tag(self, tag: str, remote: str):
         ans = subprocess.run(
-            ["git", "push", "--tags", f"{remote}", "--dry-run"],
+            ["git", "push", "--tags", remote, "--dry-run"],
             capture_output=True
         )
         if ans.returncode == Status.OK:
@@ -71,7 +71,7 @@ class GitManager:
         return ans.stdout.decode()
 
     def create_tag(self, tag: str) -> bool:
-        ans = subprocess.run(["git", "tag", f"{tag}"])
+        ans = subprocess.run(["git", "tag", tag])
         if ans.returncode == Status.OK:
             print(f"tag {tag} created...")
             return True
@@ -99,7 +99,7 @@ class GitManager:
             list (str): %H commit hash, %s commit message, %b commit body, <!end.> end of commit <|!|> will be used later to split the output.
         """
         ans = subprocess.run(
-            ["git", "log", f"{reference}",
+            ["git", "log", reference,
                 "--no-decorate", "--pretty=%H|!| %s|!| %b!end."],
             capture_output=True
         )
@@ -116,7 +116,7 @@ class GitManager:
 
     def delete_tag(self, tag: str):
         """ Delete this function """
-        ans = subprocess.run(["git", "tag", "-d", f"{tag}"])
+        ans = subprocess.run(["git", "tag", "-d", tag])
         if ans.returncode == Status.OK:
             print(f"tag {tag} deleted...")
 
@@ -130,7 +130,7 @@ class GitManager:
 
     def commit(self, message: str = "skip: CHANGELOG.md udpated"):
         ans = subprocess.run(
-            ["git", "commit", "-m", f"{message}"],
+            ["git", "commit", "-m", message],
             capture_output=True
         )
         if ans.returncode == Status.OK:
@@ -150,10 +150,6 @@ class GitManager:
     def ref_exists():
         return
 
-    def fetch_tags():
-        """ Fetch all tags from a repository """
-        return
-
     def is_repo():
         """ check if current directory is a repository """
         ans = subprocess.run(
@@ -170,7 +166,7 @@ class GitManager:
             return ans.stdout.decode().strip()
         return None
 
-    def check_if_brach_up_to_date(self, remote: str, branch: str):
+    def check_if_branch_up_to_date(self, remote: str, branch: str):
         ans = subprocess.run(
             ["git", "ls-remote", remote, branch],
             capture_output=True
@@ -181,3 +177,52 @@ class GitManager:
             return True
 
         return False
+
+    def is_detached(self):
+        return subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True
+        ).stdout.decode().strip() == "HEAD"
+
+    def fetch(self, remote: str, branch: str):
+        detached: bool = self.is_detached()
+        try:
+            if detached:
+                subprocess.run(
+                    [
+                        "git",
+                        "fetch",
+                        "--unshallow",
+                        "--tags",
+                        "--update-head-ok",
+                        remote,
+                        f"+refs/heads/{branch}:refs/heads/{branch}"
+                    ],
+                    capture_output=True
+                )
+            else:
+                subprocess.run(
+                    ["git", "fetch", "--unshallow", "--tags", remote],
+                    capture_output=True
+                )
+        except Exception as e:
+            if detached:
+                subprocess.run(
+                    ["git", "fetch", "--tags", "--update-head-ok",
+                        remote, f"+refs/heads/{branch}:refs/heads/{branch}"],
+                    capture_output=True
+                )
+            else:
+                subprocess.run(
+                    ["git", "fetch", "--tags", remote],
+                    capture_output=True
+                )
+
+    def get_default_branch(self) -> str:
+        # pattern looks for any text after HEAD branch:
+        pattern: str = r"(?<=HEAD branch: )\w+"
+        ans = subprocess.run(
+            ["git", "remote", "show", "origin"],
+            capture_output=True
+        )
+        return re.search(pattern, ans.stdout.decode().strip()).group(0)

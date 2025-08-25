@@ -98,29 +98,29 @@ class Formater:
 
         return grouped_changes
 
-    def format_changes(self, grouped_changes: dict, version: str) -> str:
-        markdown_changes: str = f'# {version}'
-        for commit_type in grouped_changes:
-            if grouped_changes[commit_type]['contents']:
-                changelog_body = [d['text']
-                                  for d in grouped_changes[commit_type]['contents']]
-                changelog_body = '\n'.join(changelog_body)
-                markdown_changes += f'\n### {commit_type.title()}\n'
-                markdown_changes += changelog_body
+    def format_changes(self, changes: dict, version: str) -> str:
+        markdown_text: str = f'# {version}'
+        for change_type in changes:
+            if changes[change_type]['contents']:
+                body = [d['text']
+                        for d in changes[change_type]['contents']]
+                body = '\n'.join(body)
+                markdown_text += f'\n### {change_type.title()}\n'
+                markdown_text += body
 
-        markdown_changes += '\n'
-        return markdown_changes
+        markdown_text += '\n'
+        return markdown_text
 
     def update_version(
             self,
             changes: dict,
-            tag: str
+            last_version: str
     ) -> str:
-        if tag is None:
+        if last_version is None:
             return self.format_version([1, 0, 0])
 
         MAJOR, MINOR, PATCH = 0, 1, 2
-        version = self.parse_version(tag)
+        version = self.parse_version(last_version)
 
         if self.has_changes(changes, self.ALL_TYPES, 'breaking_change'):
             version[MAJOR] += 1
