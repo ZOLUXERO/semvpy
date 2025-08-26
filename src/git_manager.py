@@ -9,13 +9,34 @@ class Status(IntEnum):
 
 
 class GitManager:
-    def status(self):
-        ans = subprocess.run(["git", "status"], capture_output=True)
-        if ans.returncode == Status.OK:
-            print(f"Status: {ans.stdout}")
-        else:
-            print(ans.stderr)
 
+    def _run_git_command(self, args, check=False, decode_output=True):
+        try:
+            result = subprocess.run(
+                ["git"] + args,
+                capture_output=True,
+                check=check
+            )
+            stdout = result.stdout.decode() if decode_output and result.stdout else result.stdout
+            stderr = result.stderr.decode() if decode_output and result.stderr else result.stderr
+            return result.returncode, stdout, stderr
+        except subprocess.CalledProcessError as e:
+            print(f"Git command failed: {
+                  e.stderr.decode() if e.stderr else str(e)}")
+            return 1, None, e.stderr
+        except Exception as e:
+            print(f"Unexpected error running git command: {e}")
+            return 1, None, str(e)
+
+    def status(self):
+        code, out, err = self._run_git_command(["status"])
+        if code == Status.OK:
+            print(f"Status: {out}")
+        else:
+            print(err)
+
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def help(self):
         ans = subprocess.run(["git", "--help"], capture_output=True)
         if ans.returncode == Status.OK:
@@ -23,12 +44,20 @@ class GitManager:
         else:
             print(ans.stderr)
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
+    # and implement authentication functionality
     def authenticate(self):
         ans = subprocess.run()
         return ans
 
-    def is_allowed_to_push(self) -> bool:
-        ans = subprocess.run(["git", "push", "--dry-run"], capture_output=True)
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
+    def is_allowed_to_push(self, remote: str, branch: str) -> bool:
+        ans = subprocess.run(
+            ["git", "push", "--dry-run", remote, f"HEAD:{branch}"],
+            capture_output=True
+        )
         if ans.returncode == Status.OK:
             print("Push validation successful")
             return True
@@ -36,16 +65,17 @@ class GitManager:
             print(f"Push failed: {ans.stderr.decode()}")
             return False
 
-    def push_tag(self, tag: str, remote: str):
-        ans = subprocess.run(
-            ["git", "push", "--tags", remote, "--dry-run"],
-            capture_output=True
+    def push(self, tag: str, remote: str, branch):
+        code, out, err = self._run_git_command(
+            ["push", "--tags", remote, f"HEAD:{branch}", "--dry-run"], check=True
         )
-        if ans.returncode == Status.OK:
-            print("Changes where pushed successfully")
+        if code == Status.OK:
+            print("Changes were pushed successfully")
         else:
-            print(f"Push failed: {ans.stderr.decode()}")
+            print(f"Push failed: {err}")
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def get_tags(self) -> str:
         ans = subprocess.run(
             ["git", "tag", "--list", "'v*'",
@@ -58,6 +88,8 @@ class GitManager:
 
         return ans.stdout
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def describe_tags(self) -> str:
         ans = subprocess.run(
             ["git", "describe", "--tags", "--abbrev=0"],
@@ -70,6 +102,8 @@ class GitManager:
 
         return ans.stdout.decode()
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def create_tag(self, tag: str) -> bool:
         ans = subprocess.run(["git", "tag", tag])
         if ans.returncode == Status.OK:
@@ -78,18 +112,27 @@ class GitManager:
 
         return False
 
+    # TODO: add @staticmethod, remove self
+    # use _run_git_command() function
     def get_remote(self):
-        ans = subprocess.run(
-            ["git", "config", "--get", "remote.origin.url"],
-            capture_output=True
-        )
-        if ans.returncode == Status.ERROR:
-            print("ERROR 1: directory is not a repository")
+        try:
+            ans = subprocess.run(
+                ["git", "config", "--get", "remote.origin.url"],
+                capture_output=True,
+                check=True
+            )
+            url = ans.stdout.decode().strip() if isinstance(
+                ans.stdout, bytes) else str(ans.stdout).strip()
+            return url
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: directory is not a repository. Details: {e}")
             return None
-        url = ans.stdout.decode().strip() if isinstance(
-            ans.stdout, bytes) else str(ans.stdout).strip()
-        return url
+        except Exception as e:
+            print(f"Unexpected error in get_remote: {e}")
+            return None
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def get_commits(self, reference: str = 'HEAD') -> list:
         """
         Args:
@@ -114,12 +157,16 @@ class GitManager:
             print(f"Error retrieving commits: {ans.stderr.decode()}")
             return None
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def delete_tag(self, tag: str):
         """ Delete this function """
         ans = subprocess.run(["git", "tag", "-d", tag])
         if ans.returncode == Status.OK:
             print(f"tag {tag} deleted...")
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def add(self):
         ans = subprocess.run(
             ["git", "add", "./CHANGELOG.md"],
@@ -128,6 +175,8 @@ class GitManager:
         if ans.returncode == Status.OK:
             print("CHANGELOG.md added to git changes to send")
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def commit(self, message: str = "skip: CHANGELOG.md udpated"):
         ans = subprocess.run(
             ["git", "commit", "-m", message],
@@ -136,6 +185,8 @@ class GitManager:
         if ans.returncode == Status.OK:
             print("changes to CHANGELOG.md have been commited")
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def reset():
         ans = subprocess.run(
             ["git", "reset", "--hard", "origin"],
@@ -144,12 +195,15 @@ class GitManager:
         if ans.returncode == Status.OK:
             print("changes to CHANGELOG.md have been commited")
 
+    # TODO: add @staticmethod, remove self
     def validate_version():
         return
 
+    # TODO: add @staticmethod, remove self
     def ref_exists():
         return
 
+    # TODO: add @staticmethod, remove self
     def is_repo():
         """ check if current directory is a repository """
         ans = subprocess.run(
@@ -157,6 +211,7 @@ class GitManager:
             capture_output=True
         )
 
+    # TODO: add @staticmethod, remove self
     def get_head(self):
         ans = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -166,6 +221,7 @@ class GitManager:
             return ans.stdout.decode().strip()
         return None
 
+    # TODO: add @staticmethod, remove self
     def check_if_branch_up_to_date(self, remote: str, branch: str):
         ans = subprocess.run(
             ["git", "ls-remote", remote, branch],
@@ -178,12 +234,15 @@ class GitManager:
 
         return False
 
+    # TODO: add @staticmethod, remove self
     def is_detached(self):
         return subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True
         ).stdout.decode().strip() == "HEAD"
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def fetch(self, remote: str, branch: str):
         detached: bool = self.is_detached()
         try:
@@ -218,6 +277,8 @@ class GitManager:
                     capture_output=True
                 )
 
+    # TODO: add @staticmethod, remove self
+    # improve Error handling and use _run_git_command() function
     def get_default_branch(self) -> str:
         # pattern looks for any text after HEAD branch:
         pattern: str = r"(?<=HEAD branch: )\w+"

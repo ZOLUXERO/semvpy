@@ -34,12 +34,15 @@ if __name__ == "__main__":
     changelog: File = File("CHANGELOG.md")
     if not changelog.exists():
         changelog.create_file()
+    # changelog.write_changelog(formated_changes)
 
-        # changelog.write_changelog(formated_changes)
+    package_json: File = File("package.json")
+    if package_json.exists():
+        package_json.update_package_version(new_version)
 
     print(formated_changes)
-    if git.is_allowed_to_push() and git.create_tag(new_version):
-        git.push_tag(new_version, remote)
+    if git.is_allowed_to_push(remote, branch) and git.create_tag(new_version):
+        git.push(new_version, remote, branch)
 
         # TODO: delete, this for testing purposes only
         git.delete_tag(new_version)

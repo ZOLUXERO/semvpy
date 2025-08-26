@@ -22,12 +22,32 @@ class Formater:
     PATCH_TYPES: set = {"fix", "build", "test", "revert"}
     ALL_TYPES: set = MAJOR_TYPES | MINOR_TYPES | PATCH_TYPES
 
-    # TODO: all this function needs to be revised and refactored
-    def group_changes_by_type(self, changes: list) -> dict:
-        # TODO: se estan creando dos copias de la lista en memoria
-        # puede causar problemas de rendimiento, posible solucion
-        # un diccionario?
-        commits: list = []
+    @staticmethod
+    def parse_commit(commit: str, pattern: str) -> dict:
+        parts = commit.split("|!|")
+        match = re.search(pattern, parts[Commit.MESSAGE])
+        if not match:
+            return None
+
+        return {
+            "type": match.group(Change.TYPE),
+            "scope": match.group(Change.SCOPE),
+            "attention": match.group(Change.ATTENTION),
+            "message": match.group(Change.MESSAGE),
+            "body": parts[Commit.BODY],
+            "hash": parts[Commit.HASH],
+        }
+
+    @staticmethod
+    def is_breaking_change(commit):
+        if commit["attention"]:
+            return True
+
+        body = commit["body"]
+        return any(x in body for x in ["BREAKING_CHANGE:", "BREAKING-CHANGE:", "BREAKING CHANGE:"])
+
+    @staticmethod
+    def group_changes_by_type(changes: list) -> dict:
         # Examples:
         # feat: message
         # feat<!optional>: message
@@ -38,79 +58,57 @@ class Formater:
         # (! breagking change, optional>group=3) <:>,
         # (message between 1 and 100 character>group=4)"
         pattern: str = r"(feat|fix|chore|test|build|ci|docs|style|refactor|perf|revert)(\(.+\))?(!)?:(.{1,100})"
+        grouped = {change_type: {"breaking_change": False, "contents": []}
+                   for change_type in Formater.ALL_TYPES}
 
-        # TODO: we may need to refactor this to use the
-        # MAJOR_TYPES, MINOR_TYPES, PATCH_TYPES and ALL_TYPES
-        # class variables
-        grouped_changes: dict = {
-            'feat': {'breaking_change': False, 'contents': []},
-            'fix': {'breaking_change': False, 'contents': []},
-            'chore': {'breaking_change': False, 'contents': []},
-            'test': {'breaking_change': False, 'contents': []},
-            'build': {'breaking_change': False, 'contents': []},
-            'ci': {'breaking_change': False, 'contents': []},
-            'docs': {'breaking_change': False, 'contents': []},
-            'style': {'breaking_change': False, 'contents': []},
-            'refactor': {'breaking_change': False, 'contents': []},
-            'perf': {'breaking_change': False, 'contents': []},
-            'revert': {'breaking_change': False, 'contents': []},
-        }
-        for change in changes:
-            commits.append(change.split("|!|"))
+        # TODO: se estan creando dos copias de la lista en memoria
+        # puede causar problemas de rendimiento, posible solucion
+        # un diccionario?
+        parsed_commits = list(
+            filter(None, map(lambda c: Formater.parse_commit(c, pattern), changes)))
 
-        for index, commit in enumerate(commits):
-            match = re.search(pattern, commit[Commit.MESSAGE])
-            scope: str = ''
-            message: str = ''
-            body: str = ''
-            breaking_change: bool = False
-
-            if match.group(Change.SCOPE):
-                scope = f' **{match.group(Change.SCOPE).strip('()')}**'
-            if (match.group(Change.ATTENTION)):
-                breaking_change = True
-            if match.group(Change.MESSAGE):
-                message = match.group(Change.MESSAGE)
-
-            # Breaking changes must be allways in the body and
-            # be uppercase text, contain a ':' and have a description
-            if commit[Commit.BODY].strip() != '':
-                body = f', {commit[Commit.BODY]}'
-                if ('BREAKING_CHANGE:' in commit[Commit.BODY] or
-                        'BREAKING-CHANGE:' in commit[Commit.BODY] or
-                        'BREAKING CHANGE:' in commit[Commit.BODY]):
-                    breaking_change = True
-
-            if (grouped_changes[match.group(Change.TYPE)]['breaking_change'] is False
-                    and breaking_change is True):
-                grouped_changes[match.group(
-                    Change.TYPE)]['breaking_change'] = True
-
-            grouped_changes[match.group(Change.TYPE)]['contents'].append({
-                'hash': commit[Commit.HASH],
+        for commit in parsed_commits:
+            breaking = Formater.is_breaking_change(commit)
+            scope = f' **{commit["scope"].strip("()")
+                          }**' if commit["scope"] else ""
+            body = f' ,{commit["body"]
+                        }' if commit["body"].strip() != '' else ""
+            entry = {
+                'hash': commit["hash"],
                 'scope': scope,
-                'message': message,
+                'message': commit["message"],
                 'body': body,
-                'breaking_change': breaking_change,
-                'text': f'- [[hash]({commit[Commit.HASH]
-                                     })]{scope}:{message}{body}',
-            })
+                'breaking_change': breaking,
+                'text': f'- [[hash]({commit["hash"]
+                                     })]{scope}:{commit["message"]}{body}',
+            }
+            grouped[commit["type"]]["contents"].append(entry)
+            if breaking:
+                grouped[commit["type"]]["breaking_change"] = True
 
-        return grouped_changes
+        return grouped
 
+    # TODO: add @staticmethod and remove self
     def format_changes(self, changes: dict, version: str) -> str:
-        markdown_text: str = f'# {version}'
-        for change_type in changes:
-            if changes[change_type]['contents']:
-                body = [d['text']
-                        for d in changes[change_type]['contents']]
-                body = '\n'.join(body)
-                markdown_text += f'\n### {change_type.title()}\n'
-                markdown_text += body
+        try:
+            markdown_text: str = f'# {version}'
+            for change_type in changes:
+                if changes[change_type]['contents']:
+                    body = [d['text']
+                            for d in changes[change_type]['contents']]
+                    body = '\n'.join(body)
+                    markdown_text += f'\n### {change_type.title()}\n'
+                    markdown_text += body
+            markdown_text += '\n'
+            return markdown_text
+        except KeyError as e:
+            print(f"ERROR: Missing expected key in changes dict: {e}")
+            return f"# {version}\nERROR: Could not format changes due to missing key: {e}\n"
+        except Exception as e:
+            print(f"ERROR: Unexpected error in format_changes: {e}")
+            return f"# {version}\nERROR: Could not format changes due to unexpected error: {e}\n"
 
-        markdown_text += '\n'
-        return markdown_text
-
+    # TODO: add @staticmethod and remove self
     def update_version(
             self,
             changes: dict,
@@ -138,14 +136,17 @@ class Formater:
 
         return self.format_version(version)
 
-    def parse_version(self, version: str) -> list[int]:
-        """ Parse version from vX.X.X to [X, X, X] """
+    @staticmethod
+    def parse_version(version: str) -> list[int]:
+        """Parse version from vX.X.X to [X, X, X]"""
         return [int(v) for v in version.replace('v', '').split('.')]
 
-    def format_version(self, version: list[int]) -> str:
-        """ Parse version from [X, X, X]  to vX.X.X """
-        return f'v{'.'.join(map(str, version))}'
+    @staticmethod
+    def format_version(version: list[int]) -> str:
+        """Parse version from [X, X, X] to vX.X.X"""
+        return f"v{'.'.join(map(str, version))}"
 
+    # TODO: add @staticmethod and remove self
     def has_changes(
             self,
             changes: dict,
@@ -155,6 +156,7 @@ class Formater:
         """ Check if a category of commits has changes """
         return any(changes.get(cat, {}).get(key) for cat in categories)
 
+    # TODO: add @staticmethod and remove self
     def print_format(self, grouped_changes: dict):
         for value in grouped_changes:
             print(f'{value}:\n{grouped_changes[value]}')

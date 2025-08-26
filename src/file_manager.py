@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 
 class File:
@@ -7,16 +8,30 @@ class File:
         self.file_name = file_name
         self.path = Path(file_name)
 
+    # TODO: add @staticmethod, remove self
     def exists(self) -> bool:
         try:
             path = Path(self.file_name)
-            contents = path.read_text(encoding="utf-8")
-            print(f'File: {path} exists')
+            if not path.is_file():
+                print(f"File: {path} does not exist")
+                return False
+            # Optionally, try reading a small chunk to check readability
+            with path.open("r", encoding="utf-8") as f:
+                f.read(1)
+            print(f'File: {path} exists and is readable')
             return True
+        except FileNotFoundError:
+            print(f"ERROR: File {self.file_name} not found")
+            return False
+        except PermissionError:
+            print(f"ERROR: Permission denied for file {self.file_name}")
+            return False
         except Exception as e:
-            print(f'ERROR: {e}')
+            print(f'Unexpected error in exists: {e}')
             return False
 
+    # TODO: add @staticmethod, remove self
+    # and improve Error handling
     def create_file(self):
         try:
             file = self.path
@@ -26,15 +41,37 @@ class File:
             print(f'ERROR: {e}')
             raise
 
+    # TODO: add @staticmethod, remove self
     def write_changelog(self, changes: str):
         try:
             with self.path.open("r+") as file:
-                # INFO: Carga el archivo en memoria,
-                # no es eficiente con archivos grandes!!!
                 content = file.read()
                 file.seek(0, 0)
                 file.write(changes + content)
-                file.close()
+        except FileNotFoundError:
+            print(f"ERROR: file {self.file_name} not found")
+        except PermissionError:
+            print(f"ERROR: Permission denied for file {self.file_name}")
+        except OSError as e:
+            print(f"ERROR: OS error while writing changelog: {e}")
         except Exception as e:
-            print(f'ERROR: {e}')
-            raise
+            print(f"ERROR: Unexpected error in write_changelog: {e}")
+
+    # TODO: add @staticmethod, remove self
+    def update_package_version(self, new_version: str):
+        try:
+            with self.path.open(mode="r") as file:
+                data = json.load(file)
+
+            data['version'] = new_version
+
+            with self.path.open(mode="w") as file:
+                json.dump(data, file, indent=2)
+                print(f"Version updated in {file}")
+
+        except FileNotFoundError:
+            print(f"ERROR: file {file} not found")
+        except json.JSONDecodeError:
+            print(f"ERROR: failed to decode JSON from {file}.")
+        except Exception as e:
+            print(f"ERROR: unexpected error: {e}.")
