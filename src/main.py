@@ -32,7 +32,10 @@ if __name__ == "__main__":
     formated_changes: str = formater.format_changes(changes, new_version)
 
     changelog: File = File("CHANGELOG.md")
-    # changelog.write_changelog(formated_changes)
+    if not changelog.exists():
+        changelog.create_file()
+
+        # changelog.write_changelog(formated_changes)
 
     print(formated_changes)
     if git.is_allowed_to_push() and git.create_tag(new_version):

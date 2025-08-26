@@ -6,16 +6,16 @@ class File:
     def __init__(self, file_name: str):
         self.file_name = file_name
         self.path = Path(file_name)
-        self.exists()
 
-    def exists(self):
+    def exists(self) -> bool:
         try:
             path = Path(self.file_name)
             contents = path.read_text(encoding="utf-8")
             print(f'File: {path} exists')
+            return True
         except Exception as e:
             print(f'ERROR: {e}')
-            self.create_file()
+            return False
 
     def create_file(self):
         try:
