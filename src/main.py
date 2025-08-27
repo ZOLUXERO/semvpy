@@ -1,7 +1,7 @@
 import subprocess
-from git_manager import GitManager
+import git_manager as git
+import formater
 from file_manager import File
-from formater import Formater
 
 
 def current_directory():
@@ -12,7 +12,6 @@ if __name__ == "__main__":
     current_directory()
     reference: str = 'HEAD'
 
-    git: GitManager = GitManager()
     remote: str = git.get_remote()
     branch: str = git.get_default_branch()
     if git.check_if_branch_up_to_date(remote, branch):
@@ -26,7 +25,6 @@ if __name__ == "__main__":
         reference = f'{last_version}..HEAD'
     commits: list = git.get_commits(reference)
 
-    formater: Formater = Formater()
     changes: dict = formater.group_changes_by_type(commits)
     new_version: str = formater.update_version(changes, last_version)
     formated_changes: str = formater.format_changes(changes, new_version)
