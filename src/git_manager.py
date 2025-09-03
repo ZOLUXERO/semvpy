@@ -1,6 +1,7 @@
 import subprocess
 import re
 from enum import IntEnum
+from logger import logger
 
 
 class Status(IntEnum):
@@ -21,35 +22,28 @@ def _run_git_command(args, check=False, decode_output=True):
                   if decode_output and result.stderr else result.stderr)
         return result.returncode, stdout, stderr
     except subprocess.CalledProcessError as e:
-        print(f"Git command failed: {
+        logger.warning(f"Git command failed: {
             e.stderr.decode() if e.stderr else str(e)}")
         return 1, None, e.stderr
     except Exception as e:
-        print(f"Unexpected error running git command: {e}")
+        logger.error(f"Unexpected error running git command: {e}")
         return 1, None, str(e)
 
 
 def status():
     code, out, err = _run_git_command(["status"])
     if code == Status.OK:
-        print(f"Status: {out}")
+        logger.info(f"Status: {out}")
     else:
-        print(err)
+        logger.info(err)
 
 
 def help():
     code, out, err = _run_git_command(["--help"])
     if code == Status.OK:
-        print(f"Status: {out}")
+        logger.info(f"Status: {out}")
     else:
-        print(err)
-
-
-def authenticate():
-    # TODO: improve Error handling and use _run_git_command() function
-    # and implement authentication functionality
-    ans = subprocess.run()
-    return ans
+        logger.info(err)
 
 
 def is_allowed_to_push(remote: str, branch: str) -> bool:
@@ -57,10 +51,10 @@ def is_allowed_to_push(remote: str, branch: str) -> bool:
         ["push", "--dry-run", remote, f"HEAD:{branch}"]
     )
     if code == Status.OK:
-        print(f"Push validation successful: {out}")
+        logger.info(f"Push validation successful: {out}")
         return True
     else:
-        print(err)
+        logger.info(err)
     return False
 
 
@@ -69,9 +63,9 @@ def push(tag: str, remote: str, branch):
         ["push", "--tags", remote, f"HEAD:{branch}", "--dry-run"], check=True
     )
     if code == Status.OK:
-        print("Changes were pushed successfully")
+        logger.info("Changes were pushed successfully")
     else:
-        print(f"Push failed: {err}")
+        logger.info(f"Push failed: {err}")
 
 
 def get_tags() -> str:
@@ -80,7 +74,7 @@ def get_tags() -> str:
         decode_output=False
     )
     if not out:
-        print("There's no tags in this repository, get_tags")
+        logger.info("There's no tags in this repository, get_tags")
         return None
 
     return out
@@ -91,7 +85,7 @@ def describe_tags() -> str:
         ["describe", "--tags", "--abbrev=0"],
     )
     if not out:
-        print("There's no tags in this repository, describe_tags")
+        logger.info("There's no tags in this repository, describe_tags")
         return None
 
     return out.decode()
@@ -100,10 +94,10 @@ def describe_tags() -> str:
 def create_tag(tag: str) -> bool:
     code, out, err = _run_git_command(["tag", tag])
     if code == Status.OK:
-        print(f"tag {tag} created...")
+        logger.info(f"tag {tag} created...")
         return True
     else:
-        print(f"Push failed: {err}")
+        logger.info(f"Push failed: {err}")
 
     return False
 
@@ -119,10 +113,10 @@ def get_remote():
             ans.stdout, bytes) else str(ans.stdout).strip()
         return url
     except subprocess.CalledProcessError as e:
-        print(f"ERROR: directory is not a repository. Details: {e}")
+        logger.info(f"ERROR: directory is not a repository. Details: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error in get_remote: {e}")
+        logger.info(f"Unexpected error in get_remote: {e}")
         return None
 
 
@@ -139,7 +133,7 @@ def get_commits(reference: str = 'HEAD') -> list:
         decode_output=False
     )
     if code == Status.OK:
-        print(f"Status: {out}, Commits retrieved successfully")
+        logger.info(f"Status: {out}, Commits retrieved successfully")
         if out:
             commits = out.decode().replace("\n", "").split("!end.")
 
@@ -148,7 +142,7 @@ def get_commits(reference: str = 'HEAD') -> list:
             commits.pop(-1)
         return commits
     else:
-        print(f"Error retrieving commits: {err.decode()}")
+        logger.info(f"Error retrieving commits: {err.decode()}")
 
     return None
 
@@ -157,9 +151,9 @@ def delete_tag(tag: str):
     """ Delete this function """
     code, out, err = _run_git_command(["tag", "-d", tag])
     if code == Status.OK:
-        print(f"Status: {out}, tag {tag} deleted...")
+        logger.info(f"Status: {out}, tag {tag} deleted...")
     else:
-        print(err)
+        logger.info(err)
 
 
 def add():
@@ -167,9 +161,10 @@ def add():
         ["add", "./CHANGELOG.md"]
     )
     if code == Status.OK:
-        print(f"Status: {out}, CHANGELOG.md added to git changes to send")
+        logger.info(
+            f"Status: {out}, CHANGELOG.md added to git changes to send")
     else:
-        print(err)
+        logger.info(err)
 
 
 def commit(message: str = "skip: CHANGELOG.md udpated"):
@@ -177,9 +172,10 @@ def commit(message: str = "skip: CHANGELOG.md udpated"):
         ["commit", "-m", message]
     )
     if code == Status.OK:
-        print(f"Status: {out}, changes to CHANGELOG.md have been commited")
+        logger.info(
+            f"Status: {out}, changes to CHANGELOG.md have been commited")
     else:
-        print(err)
+        logger.info(err)
 
 
 def reset():
@@ -187,9 +183,9 @@ def reset():
         ["reset", "--hard", "origin"]
     )
     if code == Status.OK:
-        print(f"Status: {out}")
+        logger.info(f"Status: {out}")
     else:
-        print(err)
+        logger.info(err)
 
 
 def validate_version():
@@ -206,9 +202,9 @@ def is_repo():
         ["rev-parse", "--git-dir"]
     )
     if code == Status.OK:
-        print(f"Status: {out}")
+        logger.info(f"Status: {out}")
     else:
-        print(err)
+        logger.info(err)
 
 
 def get_head():
@@ -216,10 +212,10 @@ def get_head():
         ["rev-parse", "HEAD"]
     )
     if code == Status.OK:
-        print(f"Status: {out}")
+        logger.info(f"Status: {out}")
         return out.strip()
     else:
-        print(err)
+        logger.info(err)
 
     return None
 
@@ -234,7 +230,7 @@ def check_if_branch_up_to_date(remote: str, branch: str):
         if get_head() == hash_remote_head.group(0):
             return True
     else:
-        print(err)
+        logger.info(err)
 
     return False
 

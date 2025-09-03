@@ -1,4 +1,5 @@
 from enum import IntEnum
+from logger import logger
 import re
 
 
@@ -105,10 +106,10 @@ def format_changes(changes: dict, version: str) -> str:
         markdown_text += '\n'
         return markdown_text
     except KeyError as e:
-        print(f"ERROR: Missing expected key in changes dict: {e}")
+        logger.error(f"ERROR: Missing expected key in changes dict: {e}")
         return f"# {version}\nERROR: Could not format changes due to missing key: {e}\n"
     except Exception as e:
-        print(f"ERROR: Unexpected error in format_changes: {e}")
+        logger.error(f"ERROR: Unexpected error in format_changes: {e}")
         return f"# {version}\nERROR: Could not format changes due to unexpected error: {e}\n"
 
 
@@ -156,7 +157,7 @@ def has_changes(
         key: str = 'contents'
 ) -> bool:
     """ Check if a category of commits has changes """
-    return any(changes.get(cat, {}).get(key) for cat in categories)
+    return any(changes.get(category, {}).get(key) for category in categories)
 
 
 def print_format(grouped_changes: dict):

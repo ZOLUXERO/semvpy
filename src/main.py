@@ -1,7 +1,9 @@
 import subprocess
 import git_manager as git
+from git_auth import authenticate_url, AuthenticationError
 import formater
 from file_manager import File
+from logger import logger
 
 
 def current_directory():
@@ -9,16 +11,23 @@ def current_directory():
 
 
 if __name__ == "__main__":
+    logger.info('Running semvpy')
     current_directory()
     reference: str = 'HEAD'
 
     remote: str = git.get_remote()
     branch: str = git.get_default_branch()
-    if git.check_if_branch_up_to_date(remote, branch):
-        print("Local branch is up to date with remote")
+    try:
+        auth_remote = authenticate_url(remote)
+    except AuthenticationError as e:
+        logger.error(str(e))
+        exit(1)
+
+    if git.check_if_branch_up_to_date(auth_remote, branch):
+        logger.debug('Local branch is up to date with remote')
     else:
-        git.fetch(remote, branch)
-        print("Local branch is NOT up to date with remote")
+        git.fetch(auth_remote, branch)
+        logger.debug('Local branch is NOT up to date with remote')
 
     last_version: str = git.get_tags()
     if last_version:
@@ -28,7 +37,7 @@ if __name__ == "__main__":
     changes: dict = formater.group_changes_by_type(commits)
     new_version: str = formater.update_version(changes, last_version)
     formated_changes: str = formater.format_changes(changes, new_version)
-    print(formated_changes)
+    logger.info(formated_changes)
 
     changelog: File = File("CHANGELOG.md")
     if not changelog.exists():
@@ -40,8 +49,10 @@ if __name__ == "__main__":
         package_json.update_package_version(new_version)
 
     tag_was_created: bool = git.create_tag(new_version)
-    if git.is_allowed_to_push(remote, branch) and tag_was_created:
-        git.push(new_version, remote, branch)
+    if git.is_allowed_to_push(auth_remote, branch) and tag_was_created:
+        git.push(new_version, auth_remote, branch)
 
         # TODO: delete, this for testing purposes only
         git.delete_tag(new_version)
+
+    logger.info('Stop semvpy')

@@ -1,4 +1,5 @@
 from pathlib import Path
+from logger import logger
 import json
 
 
@@ -13,21 +14,21 @@ class File:
         try:
             path = Path(self.file_name)
             if not path.is_file():
-                print(f"File: {path} does not exist")
+                logger.info(f"File: {path} does not exist")
                 return False
             # Optionally, try reading a small chunk to check readability
             with path.open("r", encoding="utf-8") as f:
                 f.read(1)
-            print(f'File: {path} exists and is readable')
+            logger.info(f'File: {path} exists and is readable')
             return True
         except FileNotFoundError:
-            print(f"ERROR: File {self.file_name} not found")
+            logger.error(f"ERROR: File {self.file_name} not found")
             return False
         except PermissionError:
-            print(f"ERROR: Permission denied for file {self.file_name}")
+            logger.error(f"ERROR: Permission denied for file {self.file_name}")
             return False
         except Exception as e:
-            print(f'Unexpected error in exists: {e}')
+            logger.error(f'Unexpected error in exists: {e}')
             return False
 
     # TODO: add @staticmethod, remove self
@@ -36,9 +37,9 @@ class File:
         try:
             file = self.path
             file.touch()
-            print(f'File {self.file_name} created.')
+            logger.info(f'File {self.file_name} created.')
         except Exception as e:
-            print(f'ERROR: {e}')
+            logger.error(f'ERROR: {e}')
             raise
 
     # TODO: add @staticmethod, remove self
@@ -49,13 +50,13 @@ class File:
                 file.seek(0, 0)
                 file.write(changes + content)
         except FileNotFoundError:
-            print(f"ERROR: file {self.file_name} not found")
+            logger.error(f"ERROR: file {self.file_name} not found")
         except PermissionError:
-            print(f"ERROR: Permission denied for file {self.file_name}")
+            logger.error(f"ERROR: Permission denied for file {self.file_name}")
         except OSError as e:
-            print(f"ERROR: OS error while writing changelog: {e}")
+            logger.error(f"ERROR: OS error while writing changelog: {e}")
         except Exception as e:
-            print(f"ERROR: Unexpected error in write_changelog: {e}")
+            logger.error(f"ERROR: Unexpected error in write_changelog: {e}")
 
     # TODO: add @staticmethod, remove self
     def update_package_version(self, new_version: str):
@@ -67,11 +68,11 @@ class File:
 
             with self.path.open(mode="w") as file:
                 json.dump(data, file, indent=2)
-                print(f"Version updated in {file}")
+                logger.info(f"Version updated in {file}")
 
         except FileNotFoundError:
-            print(f"ERROR: file {file} not found")
+            logger.error(f"ERROR: file {file} not found")
         except json.JSONDecodeError:
-            print(f"ERROR: failed to decode JSON from {file}.")
+            logger.error(f"ERROR: failed to decode JSON from {file}.")
         except Exception as e:
-            print(f"ERROR: unexpected error: {e}.")
+            logger.error(f"ERROR: unexpected error: {e}.")
