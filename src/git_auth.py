@@ -9,6 +9,8 @@ class AuthenticationError(Exception):
 
 
 def detect_auth_method():
+    # TODO: validate azure devops configuration
+    # and usage, it may differ from the others
     tokens = [
         ('GH_TOKEN', 'github'),
         ('GITHUB_TOKEN', 'github'),
