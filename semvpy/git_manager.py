@@ -1,7 +1,7 @@
 import subprocess
 import re
 from enum import IntEnum
-from logger import logger
+from semvpy.logger import logger
 
 
 class Status(IntEnum):

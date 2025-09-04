@@ -1,7 +1,6 @@
 import os
-import re
 from urllib.parse import quote, urlparse
-from logger import logger
+from semvpy.logger import logger
 
 
 class AuthenticationError(Exception):

@@ -1,5 +1,5 @@
 from pathlib import Path
-from logger import logger
+from semvpy.logger import logger
 import json
 
 

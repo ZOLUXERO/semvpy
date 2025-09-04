@@ -1,9 +1,9 @@
 import subprocess
-import git_manager as git
-from git_auth import authenticate_url, AuthenticationError
-import formater
-from file_manager import File
-from logger import logger
+from semvpy import git_manager as git
+from semvpy import formater
+from semvpy.git_auth import authenticate_url, AuthenticationError
+from semvpy.file_manager import File
+from semvpy.logger import logger
 
 
 def current_directory():
